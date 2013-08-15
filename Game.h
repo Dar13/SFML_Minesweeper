@@ -7,6 +7,20 @@
 
 #include "Menu.h"
 
+class FieldShape : public sf::RectangleShape
+{
+public:
+	FieldShape() : RectangleShape() {}
+
+	void mouseOver() { this->setFillColor(sf::Color(80,80,150,255)); }
+	void revert() { this->setFillColor(sf::Color::Blue); }
+
+	bool isMine() { return _isMine; }
+
+private:
+	bool _isMine;
+};
+
 class Game
 {
 public:
@@ -20,10 +34,13 @@ public:
 private:
 	sharedData _gameParameters;
 
+	int _gridFarthestLeft,_gridFarthestRight;
+	int _gridTop,_gridBottom;
+
 	sfmlRenderWindow _renderWindow;
 	sfmlFont _font;
 
-	std::vector<sf::RectangleShape> _grid;
+	std::vector<FieldShape> _grid;
 };
 
 #endif
