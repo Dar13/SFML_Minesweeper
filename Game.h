@@ -30,6 +30,8 @@ public:
 
 	void Run();
 
+	int getGridIndex(int mouseX,int mouseY);
+
 	void Destroy(sfmlRenderWindow& window,sfmlFont& font);
 private:
 	sharedData _gameParameters;
