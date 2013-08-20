@@ -89,7 +89,8 @@ int Game::getGridIndex(int mouseX,int mouseY)
 	int finalGridCoord = -1;
 
 	auto vec = getRelativeMouseCoords(mouseX,mouseY);
-	if(vec.x != -1 && vec.y != -1)
+	if(vec.x != -1 && vec.y != -1 &&
+		(vec.x * _gameParameters.fieldHeight + vec.y) < (_gameParameters.fieldHeight * _gameParameters.fieldWidth))
 	{
 		finalGridCoord = (vec.x * _gameParameters.fieldHeight) + vec.y;
 	}
@@ -97,7 +98,110 @@ int Game::getGridIndex(int mouseX,int mouseY)
 	return finalGridCoord;
 }
 
-int Game::getNumberOfAdjacentBombs(int relMouseX,int relMouseY)
+void Game::clickAdjacentEmpties(int mX,int mY)
+{
+	clickAdjacentEmpties(sf::Vector2i(mX,mY));
+}
+
+void Game::colorGridSpace(int gridIndex,int numberOfBombs)
+{
+	switch(numberOfBombs)
+	{
+	case 1:
+		_grid[gridIndex].setFillColor(sf::Color::Green);
+		break;
+	case 2:
+		_grid[gridIndex].setFillColor(sf::Color::Cyan);
+		break;
+	case 3:
+		_grid[gridIndex].setFillColor(sf::Color::Magenta);
+		break;
+	case 4:
+		_grid[gridIndex].setFillColor(sf::Color::Yellow);
+		break;
+	case 5:
+		_grid[gridIndex].setFillColor(sf::Color::Black);
+		break;
+	case 6:
+		_grid[gridIndex].setFillColor(sf::Color(255,255,0,255));
+		break;
+	case 7:
+		_grid[gridIndex].setFillColor(sf::Color(255,100,255,255));
+		break;
+	case 8:
+		_grid[gridIndex].setFillColor(sf::Color(100,255,255,255));
+		break;
+	}
+}
+
+void Game::clickAdjacentEmpties(sf::Vector2i relativeMouse)
+{
+	std::unique_ptr<int[]> adjacent(_generateAdjacentSpaces(relativeMouse.x,relativeMouse.y));
+	for(int i = 0; i < 8; ++i)
+	{
+		int index = adjacent[i];
+		if(index == -1) { continue; }
+		if(!_grid[adjacent[i]].isMine() && !_grid[adjacent[i]].isClicked())
+		{
+			_grid[adjacent[i]].setClicked(true);
+			_grid[index].setFillColor(sf::Color(80,80,150,255));
+			int bombs;
+			switch(i)
+			{
+			case 0: //top
+				bombs = getNumberOfAdjacentBombs(relativeMouse.x,relativeMouse.y - 1);
+				colorGridSpace(adjacent[i],bombs);
+				if(bombs == 0)
+					clickAdjacentEmpties(relativeMouse.x,relativeMouse.y - 1);
+				break;
+			case 1: //bottom
+				bombs = getNumberOfAdjacentBombs(relativeMouse.x,relativeMouse.y + 1);
+				colorGridSpace(adjacent[i],bombs);
+				if(bombs == 0)
+					clickAdjacentEmpties(relativeMouse.x,relativeMouse.y + 1);
+				break;
+			case 2: //left
+				bombs = getNumberOfAdjacentBombs(relativeMouse.x - 1,relativeMouse.y);
+				colorGridSpace(adjacent[i],bombs);
+				if(bombs == 0)
+					clickAdjacentEmpties(relativeMouse.x - 1,relativeMouse.y);
+				break;
+			case 3: //right
+				bombs = getNumberOfAdjacentBombs(relativeMouse.x + 1,relativeMouse.y);
+				colorGridSpace(adjacent[i],bombs);
+				if(bombs == 0)
+					clickAdjacentEmpties(relativeMouse.x + 1,relativeMouse.y);
+				break;
+			case 4: //top left
+				bombs = getNumberOfAdjacentBombs(relativeMouse.x - 1,relativeMouse.y - 1);
+				colorGridSpace(adjacent[i],bombs);
+				if(bombs == 0)
+					clickAdjacentEmpties(relativeMouse.x - 1,relativeMouse.y - 1);
+				break;
+			case 5: //top right
+				bombs = getNumberOfAdjacentBombs(relativeMouse.x + 1,relativeMouse.y - 1);
+				colorGridSpace(adjacent[i],bombs);
+				if(bombs == 0)
+					clickAdjacentEmpties(relativeMouse.x + 1,relativeMouse.y - 1);
+				break;
+			case 6: //bottom left
+				bombs = getNumberOfAdjacentBombs(relativeMouse.x - 1,relativeMouse.y + 1);
+				colorGridSpace(adjacent[i],bombs);
+				if(bombs == 0)
+					clickAdjacentEmpties(relativeMouse.x - 1,relativeMouse.y + 1);
+				break;
+			case 7: //bottom right
+				bombs = getNumberOfAdjacentBombs(relativeMouse.x + 1,relativeMouse.y + 1);
+				colorGridSpace(adjacent[i],bombs);
+				if(bombs == 0)
+					clickAdjacentEmpties(relativeMouse.x + 1,relativeMouse.y + 1);
+				break;
+			}
+		}
+	}
+}
+
+int* Game::_generateAdjacentSpaces(int relMouseX,int relMouseY)
 {
 	const int TOP = 0;
 	const int BTM = 1;
@@ -108,9 +212,7 @@ int Game::getNumberOfAdjacentBombs(int relMouseX,int relMouseY)
 	const int BTM_LFT = 6;
 	const int BTM_RGT = 7;
 
-	bool adjacentBombs[7];
-
-	int adjacentSpaces[8];
+	int* adjacentSpaces = new int[8];
 	adjacentSpaces[TOP] = ((relMouseX * _gameParameters.fieldHeight) + (relMouseY - 1));
 	adjacentSpaces[BTM] = ((relMouseX *  _gameParameters.fieldHeight) +  (relMouseY + 1));
 	adjacentSpaces[RGT] = (((relMouseX + 1) *  _gameParameters.fieldHeight) + relMouseY);
@@ -129,13 +231,28 @@ int Game::getNumberOfAdjacentBombs(int relMouseX,int relMouseY)
 		}
 	}
 
+	return adjacentSpaces;
+}
+
+int Game::getNumberOfAdjacentBombs(int relMouseX,int relMouseY)
+{
+	const int TOP = 0;
+	const int BTM = 1;
+	const int LFT = 2;
+	const int RGT = 3;
+	const int TOP_LFT = 4;
+	const int TOP_RGT = 5;
+	const int BTM_LFT = 6;
+	const int BTM_RGT = 7;
+
+	std::unique_ptr<int[]> adjacentSpaces(_generateAdjacentSpaces(relMouseX,relMouseY));
+
 	//check mines
 	int sum = 0;
 	for(int i = 0; i < 8; i++)
 	{
 		if(adjacentSpaces[i] == -1) { continue; }
 
-		//adjacentBombs[i] = _grid[adjacentSpaces[i]].isMine();
 		if(_grid[adjacentSpaces[i]].isMine())
 		{
 			sum++;
@@ -192,24 +309,12 @@ void Game::Run()
 							//no need to check for valid input. If it gets this far, the data is good.
 							int numOfAdjacentBombs = getNumberOfAdjacentBombs(v.x,v.y);
 
-							switch(numOfAdjacentBombs)
+							if(numOfAdjacentBombs == 0)
 							{
-							case 1:
-								_grid[gridIndex].setFillColor(sf::Color::Green);
-								break;
-							case 2:
-								_grid[gridIndex].setFillColor(sf::Color::Cyan);
-								break;
-							case 3:
-								_grid[gridIndex].setFillColor(sf::Color::Magenta);
-								break;
-							case 4:
-								_grid[gridIndex].setFillColor(sf::Color::Yellow);
-								break;
-							case 5:
-								_grid[gridIndex].setFillColor(sf::Color::Black);
-								break;
+								clickAdjacentEmpties(v.x,v.y);
 							}
+
+							colorGridSpace(gridIndex,numOfAdjacentBombs);
 
 							_grid[gridIndex].setClicked(true);
 						}

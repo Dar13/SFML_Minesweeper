@@ -38,6 +38,12 @@ public:
 	sf::Vector2i getRelativeMouseCoords(int mouseX,int mouseY);
 	int getGridIndex(int mouseX,int mouseY);
 	int getNumberOfAdjacentBombs(int relMouseX,int relMouseY);
+	void clickAdjacentEmpties(sf::Vector2i relativeMouse);
+	void clickAdjacentEmpties(int mX,int mY);
+	bool isAdjacent(int origin,int test);
+	void colorGridSpace(int gridIndex,int numberOfBombs);
+
+	int* _generateAdjacentSpaces(int relMouseX,int relMouseY);
 
 	void Destroy(sfmlRenderWindow& window,sfmlFont& font);
 private:
