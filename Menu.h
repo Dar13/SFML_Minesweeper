@@ -10,7 +10,7 @@
 #include <map>
 #include <functional>
 
-#define DEFAULT_MINECOUNT 50
+#define DEFAULT_MINECOUNT 25
 #define DEFAULT_FIELDWIDTH 16
 #define DEFAULT_FIELDHEIGHT 16
 

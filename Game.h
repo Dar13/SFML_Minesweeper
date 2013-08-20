@@ -10,15 +10,20 @@
 class FieldShape : public sf::RectangleShape
 {
 public:
-	FieldShape() : RectangleShape() {}
+	FieldShape() : RectangleShape(),_isMine(false),_clicked(false) {}
 
 	void mouseOver() { this->setFillColor(sf::Color(80,80,150,255)); }
 	void revert() { this->setFillColor(sf::Color::Blue); }
 
 	bool isMine() { return _isMine; }
+	void setMine(bool isMine) { _isMine = isMine; }
+
+	bool isClicked() { return _clicked; }
+	void setClicked(bool isClicked) { _clicked = isClicked;}
 
 private:
 	bool _isMine;
+	bool _clicked;
 };
 
 class Game
@@ -30,7 +35,9 @@ public:
 
 	void Run();
 
+	sf::Vector2i getRelativeMouseCoords(int mouseX,int mouseY);
 	int getGridIndex(int mouseX,int mouseY);
+	int getNumberOfAdjacentBombs(int relMouseX,int relMouseY);
 
 	void Destroy(sfmlRenderWindow& window,sfmlFont& font);
 private:
@@ -43,6 +50,7 @@ private:
 	sfmlFont _font;
 
 	std::vector<FieldShape> _grid;
+	sf::Text _gameOverText;
 };
 
 #endif
