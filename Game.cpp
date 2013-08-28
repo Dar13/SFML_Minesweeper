@@ -3,6 +3,7 @@
 #include <thread>
 #include <chrono>
 #include <random>
+#include <sstream>
 
 Game::Game(sharedData& data, sfmlRenderWindow& window,sfmlFont& font)
 	: _renderWindow(std::move(window)),
@@ -18,8 +19,8 @@ void Game::Initialize()
 	sf::Vector2u size((_gameParameters.fieldWidth * 13 + 200),(_gameParameters.fieldHeight * 13 + 200));
 	_renderWindow->setSize(size);
 	sf::Vector2u v = _renderWindow->getSize();
-	_renderWindow->setView(sf::View(sf::Vector2f(size.x / 2,size.y / 2),
-									sf::Vector2f(size.x,size.y)));
+	_renderWindow->setView(sf::View(sf::Vector2f(static_cast<float>(size.x) / 2,static_cast<float>(size.y) / 2),
+									sf::Vector2f(static_cast<float>(size.x),static_cast<float>(size.y))));
 
 	int offsetX = (size.x - _gameParameters.fieldWidth * 17) / 2;
 	int offsetY = 75;
@@ -42,7 +43,8 @@ void Game::Initialize()
 			shape.setOutlineThickness(1.0f);
 			shape.setSize(sf::Vector2f(15,15));
 			shape.setOrigin(-1,-1);
-			shape.setPosition(offsetX + i * 17,offsetY + j * 17);
+			shape.setPosition(static_cast<float>(offsetX + i * 17),
+							  static_cast<float>(offsetY + j * 17));
 			if(std::find(mineIndices.begin(),mineIndices.end(),(j*i)) != mineIndices.end())
 			{
 				shape.setMine(true);
@@ -55,16 +57,35 @@ void Game::Initialize()
 		}
 	}
 
+	_bombs = _gameParameters.mineCount;
+	_flags = _bombs;
+
+	std::stringstream ss;
+	ss << _bombs;
+	_bombsLeftText.setString(ss.str());
+	_bombsLeftText.setCharacterSize(15);
+	_bombsLeftText.setColor(sf::Color::White);
+	_bombsLeftText.setPosition(static_cast<float>(_renderWindow->getSize().x) / 2 + 100,50);
+	_bombsLeftText.setFont(*_font);
+
+	ss.str("");
+	ss << _flags;
+	_flagsLeftText.setString(ss.str());
+	_flagsLeftText.setCharacterSize(15);
+	_flagsLeftText.setColor(sf::Color::White);
+	_flagsLeftText.setPosition(static_cast<float>(_renderWindow->getSize().x) / 2 - 100, 50);
+	_flagsLeftText.setFont(*_font);
+
 	_gameOverText.setFont(*_font);
 	_gameOverText.setCharacterSize(20);
 	_gameOverText.setColor(sf::Color::White);
 	_gameOverText.setString("Game Over");
 	_gameOverText.setPosition((_renderWindow->getSize().x / 2) - (_gameOverText.getLocalBounds().width / 2), 10);
 	
-	_gridFarthestLeft = _grid.begin()->getPosition().x;
-	_gridFarthestRight = std::prev(_grid.end())->getGlobalBounds().left + std::prev(_grid.end())->getGlobalBounds().width;
-	_gridTop = _grid.begin()->getPosition().y;
-	_gridBottom = std::prev(_grid.end())->getGlobalBounds().top + std::prev(_grid.end())->getGlobalBounds().height;
+	_gridFarthestLeft = static_cast<int>(_grid.begin()->getPosition().x);
+	_gridFarthestRight = static_cast<int>(std::prev(_grid.end())->getGlobalBounds().left + std::prev(_grid.end())->getGlobalBounds().width);
+	_gridTop = static_cast<int>(_grid.begin()->getPosition().y);
+	_gridBottom = static_cast<int>(std::prev(_grid.end())->getGlobalBounds().top + std::prev(_grid.end())->getGlobalBounds().height);
 }
 
 sf::Vector2i Game::getRelativeMouseCoords(int mouseX,int mouseY)
@@ -76,7 +97,7 @@ sf::Vector2i Game::getRelativeMouseCoords(int mouseX,int mouseY)
 	}
 	else
 	{
-		return sf::Vector2i(ceil((mouseX - _gridFarthestLeft) / 17),ceil(mouseY - _gridTop) / 17);
+		return sf::Vector2i(static_cast<int>(ceil((mouseX - _gridFarthestLeft) / 17)),static_cast<int>(ceil(mouseY - _gridTop) / 17));
 	}
 }
 
@@ -236,15 +257,6 @@ int* Game::_generateAdjacentSpaces(int relMouseX,int relMouseY)
 
 int Game::getNumberOfAdjacentBombs(int relMouseX,int relMouseY)
 {
-	const int TOP = 0;
-	const int BTM = 1;
-	const int LFT = 2;
-	const int RGT = 3;
-	const int TOP_LFT = 4;
-	const int TOP_RGT = 5;
-	const int BTM_LFT = 6;
-	const int BTM_RGT = 7;
-
 	std::unique_ptr<int[]> adjacentSpaces(_generateAdjacentSpaces(relMouseX,relMouseY));
 
 	//check mines
@@ -300,24 +312,55 @@ void Game::Run()
 						{
 							//game over.
 							_grid[gridIndex].setFillColor(sf::Color::Red);
-							//gameRun = false;
+							gameRun = false;
 						}
 						else
 						{
-							//check adjacent tiles for bombs.
-							auto v = getRelativeMouseCoords(evt.mouseButton.x,evt.mouseButton.y);
-							//no need to check for valid input. If it gets this far, the data is good.
-							int numOfAdjacentBombs = getNumberOfAdjacentBombs(v.x,v.y);
-
-							if(numOfAdjacentBombs == 0)
+							if(!_grid[gridIndex].isFlagged())
 							{
-								clickAdjacentEmpties(v.x,v.y);
+								//check adjacent tiles for bombs.
+								auto v = getRelativeMouseCoords(evt.mouseButton.x,evt.mouseButton.y);
+								//no need to check for valid input. If it gets this far, the data is good.
+								int numOfAdjacentBombs = getNumberOfAdjacentBombs(v.x,v.y);
+
+								if(numOfAdjacentBombs == 0)
+								{
+									clickAdjacentEmpties(v.x,v.y);
+								}
+
+								colorGridSpace(gridIndex,numOfAdjacentBombs);
+
+								_grid[gridIndex].setClicked(true);
 							}
-
-							colorGridSpace(gridIndex,numOfAdjacentBombs);
-
-							_grid[gridIndex].setClicked(true);
 						}
+					}
+
+					if(evt.mouseButton.button == sf::Mouse::Button::Right)
+					{
+						//flagging.
+						if(_grid[gridIndex].isFlagged())
+						{
+							_grid[gridIndex].setFlag(false);
+							_grid[gridIndex].setOutlineColor(sf::Color::White);
+							_flags++;
+							_bombs++;
+						}
+						else
+						{
+							_grid[gridIndex].setFlag(true);
+							_grid[gridIndex].setOutlineColor(sf::Color::Red);
+							_flags--;
+							_bombs--;
+						}
+
+						std::stringstream ss;
+						ss << _flags;
+						_flagsLeftText.setString(ss.str());
+						ss.clear();
+						ss.flush();
+						ss.str("");
+						ss << _bombs;
+						_bombsLeftText.setString(ss.str());
 					}
 				}
 			}
@@ -328,12 +371,14 @@ void Game::Run()
 		std::for_each(_grid.begin(),_grid.end(),[&](FieldShape& shape)
 		{
 			_renderWindow->draw(shape);
-			if(index != gridIndex && !shape.isClicked())
+			if(index != gridIndex && !shape.isClicked() && !shape.isFlagged())
 			{
 				shape.revert();
 			}
 			index++;
 		});
+		_renderWindow->draw(_flagsLeftText);
+		_renderWindow->draw(_bombsLeftText);
 		if(!gameRun) { _renderWindow->draw(_gameOverText); }
 		_renderWindow->display();
 

@@ -25,7 +25,6 @@ int main()
 {
 	sf::ContextSettings settings;
 	settings.antialiasingLevel = 4;
-	//sf::RenderWindow renderWindow(sf::VideoMode(800,600),"Minesweeper Clone",sf::Style::Titlebar | sf::Style::Close,settings);
 	sfmlRenderWindow renderWindow;
 	renderWindow.reset(new sf::RenderWindow(sf::VideoMode(800,600),
 											"Minesweeper Clone",
